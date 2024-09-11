@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Traverse Calculation</title>
+    <style>
+        /* Full-screen background */
+        body {
+            animation: fadeIn 1.5s ease-in-out;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f3f4f6;
+        }
+
+        /* Animation for button hover */
+        button:hover {
+            transform: scale(1.05);
+            background-color: #2563EB;
+            box-shadow: 0px 4px 15px rgba(37, 99, 235, 0.5);
+        }
+
+        /* Input fields animation */
+        input[type="text"], input[type="number"], select {
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #2563EB;
+            box-shadow: 0px 0px 10px rgba(37, 99, 235, 0.3);
+        }
+
+        /* Keyframes for animations */
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes rowFadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Animating table rows when they are added */
+        #tableBody tr {
+            animation: rowFadeIn 0.5s ease-in-out;
+        }
+
+        /* Styling table headers */
+        th {
+            background-color: #1E40AF;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: bold;
+        }
+
+        /* Styling table body cells */
+        td {
+            transition: background-color 0.3s ease;
+        }
+
+        /* Hover effect on table rows */
+        tbody tr:hover {
+            background-color: #EFF6FF;
+        }
+
+        /* Container to center content and limit max width */
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .content {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+    </style>
+    <script>
+        function calculate() {
+            const stations = document.getElementById("stations").value;
+            let tableBody = document.getElementById("tableBody");
+            tableBody.innerHTML = ''; // Clear previous rows
+
+            let totalNorth = 0, totalSouth = 0, totalEast = 0, totalWest = 0;
+            let totalDistance = 0;
+
+            for (let i = 1; i <= stations; i++) {
+                const bearing = document.getElementById(`bearing${i}`).value;
+                const distance = parseFloat(document.getElementById(`distance${i}`).value);
+
+                let bearingRadians = convertToRadians(bearing);
+                let latitude = distance * Math.cos(bearingRadians);
+                let departure = distance * Math.sin(bearingRadians);
+
+                let north = latitude > 0 ? latitude : 0;
+                let south = latitude < 0 ? Math.abs(latitude) : 0;
+                let east = departure > 0 ? departure : 0;
+                let west = departure < 0 ? Math.abs(departure) : 0;
+
+                totalNorth += north;
+                totalSouth += south;
+                totalEast += east;
+                totalWest += west;
+                totalDistance += distance;
+
+                let row = `
+                    <tr>
+                        <td class="border border-gray-400 px-4 py-2">${i}</td>
+                        <td class="border border-gray-400 px-4 py-2">${bearing}</td>
+                        <td class="border border-gray-400 px-4 py-2">${distance}</td>
+                        <td class="border border-gray-400 px-4 py-2">${north.toFixed(3)}</td>
+                        <td class="border border-gray-400 px-4 py-2">${south.toFixed(3)}</td>
+                        <td class="border border-gray-400 px-4 py-2">${east.toFixed(3)}</td>
+                        <td class="border border-gray-400 px-4 py-2">${west.toFixed(3)}</td>
+                    </tr>`;
+
+                tableBody.innerHTML += row;
+            }
+
+            let latDifference = Math.abs(totalNorth - totalSouth);
+            let depDifference = Math.abs(totalEast - totalWest);
+            let closingError = Math.sqrt(Math.pow(latDifference, 2) + Math.pow(depDifference, 2));
+            let linearMisclose = 1 / (closingError / totalDistance);
+
+            let miscloseClass = "";
+            if (linearMisclose >= 8000) {
+                miscloseClass = "First Class";
+            } else if (linearMisclose >= 4000 && linearMisclose < 8000) {
+                miscloseClass = "Second Class";
+            } else {
+                miscloseClass = "Third Class";
+            }
+
+            document.getElementById("totals").innerHTML = `
+                <tr>
+                    <td colspan="3" class="font-bold">TOTAL</td>
+                    <td>${totalNorth.toFixed(3)}</td>
+                    <td>${totalSouth.toFixed(3)}</td>
+                    <td>${totalEast.toFixed(3)}</td>
+                    <td>${totalWest.toFixed(3)}</td>
+                </tr>
+                <tr>
+                    <td colspan="3" class="font-bold">DIFFERENCE</td>
+                    <td colspan="2">${latDifference.toFixed(3)}</td>
+                    <td colspan="2">${depDifference.toFixed(3)}</td>
+                </tr>
+                <tr>
+                    <td colspan="3" class="font-bold">CLOSING ERROR</td>
+                    <td colspan="4">${closingError.toFixed(3)}</td>
+                </tr>
+                <tr>
+                    <td colspan="3" class="font-bold">LINEAR MISCLOSE</td>
+                    <td colspan="4">${linearMisclose.toFixed(3)} (${miscloseClass})</td>
+                </tr>
+                <tr>
+                    <td colspan="3" class="font-bold">SUM OF DISTANCES</td>
+                    <td colspan="4">${totalDistance.toFixed(3)}</td>
+                </tr>`;
+        }
+
+        function convertToRadians(bearing) {
+            let parts = bearing.split(/[^\d+]/);
+            let degrees = parseFloat(parts[0]);
+            let minutes = parseFloat(parts[1]) || 0;
+            let seconds = parseFloat(parts[2]) || 0;
+
+            return (degrees + minutes / 60 + seconds / 3600) * (Math.PI / 180);
+        }
+
+        function updateStationInput() {
+            const stations = document.getElementById("stations").value;
+            let inputFields = document.getElementById("inputFields");
+            inputFields.innerHTML = ''; // Clear previous inputs
+
+            for (let i = 1; i <= stations; i++) {
+                inputFields.innerHTML += `
+                    <div class="flex space-x-2 my-2">
+                        <label>Station ${i}:</label>
+                        <input type="text" id="bearing${i}" placeholder="Bearing (deg min sec)" class="border border-gray-300 px-2 py-1 rounded">
+                        <input type="number" id="distance${i}" placeholder="Distance" class="border border-gray-300 px-2 py-1 rounded">
+                    </div>`;
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <h1 class="text-center text-2xl font-bold mb-4">Traverse Survey Calculation By Cat</h1>
+
+            <label for="stations" class="block font-semibold">Number of Stations (4-10):</label>
+            <select id="stations" onchange="updateStationInput()" class="border border-gray-400 px-4 py-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+            </select>
+
+            <div id="inputFields"></div>
+
+            <button onclick="calculate()" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Calculate</button>
+
+            <div class="overflow-x-auto mt-6">
+                <table class="min-w-full border-collapse border border-gray-400">
+                    <thead>
+                        <tr>
+                            <th class="border border-gray-400 px-4 py-2">Station</th>
+                            <th class="border border-gray-400 px-4 py-2">Bearing</th>
+                            <th class="border border-gray-400 px-4 py-2">Distance</th>
+                            <th class="border border-gray-400 px-4 py-2">North</th>
+                            <th class="border border-gray-400 px-4 py-2">South</th>
+                            <th class="border border-gray-400 px-4 py-2">East</th>
+                            <th class="border border-gray-400 px-4 py-2">West</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                    <tfoot id="totals"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
